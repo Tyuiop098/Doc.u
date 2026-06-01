@@ -85,11 +85,11 @@
         </div>
         <div>
           <h1 class="text-xl md:text-2xl font-black tracking-wide drop-shadow-md">ระบบจัดทำเอกสารและรายงานจำลอง</h1>
-          <p class="text-xs md:text-sm text-red-100 font-medium">แก้ไขการตัดคำภาษาไทยและจัดขอบเขตตัวอักษรให้อยู่ในระยะที่ถูกต้อง ป้องกันไม่ให้ล้นขอบกระดาษ</p>
+          <p class="text-xs md:text-sm text-red-100 font-medium">แก้ไขระยะจัดวางเนื้อหาบาลานซ์ซ้ายขวา ป้องกันไม่ให้ล้นขอบกระดาษ</p>
         </div>
       </div>
       <div class="bg-white text-red-950 font-bold px-4 py-2 rounded-xl border border-amber-300 shadow-sm text-xs">
-        ✅ อัปเดต: ระบบล็อกขอบกระดาษ (Anti-Overflow)
+        ✅ อัปเดต: บาลานซ์ระยะย่อหน้าซ้าย-ขวา
       </div>
     </div>
   </header>
@@ -263,17 +263,17 @@
                   <!-- แถว เรียน และ เรื่อง -->
                   <div class="mt-10 space-y-2 text-[16px]">
                     <div class="flex items-start">
-                      <span class="font-bold w-[75px] shrink-0">เรียน</span>
-                      <span id="out-to" class="break-words flex-1"><></span>
+                      <span class="font-bold w-[60px] shrink-0">เรียน</span>
+                      <span id="out-to" class="break-all flex-1"><></span>
                     </div>
                     <div class="flex items-start">
-                      <span class="font-bold w-[75px] shrink-0">เรื่อง</span>
-                      <span id="out-subject" class="break-words flex-1"><></span>
+                      <span class="font-bold w-[60px] shrink-0">เรื่อง</span>
+                      <span id="out-subject" class="break-all flex-1"><></span>
                     </div>
                   </div>
 
-                  <!-- แถวรายละเอียดข้อความ (เยื้องด้านซ้าย 75px และบีบขอบด้านขวาอัตโนมัติ ไม่ล้นขอบแดงชัวร์ 100%) -->
-                  <div id="out-body" class="mt-6 text-[16px] text-justify leading-relaxed whitespace-pre-wrap ml-[75px] break-all" style="word-break: break-all; overflow-wrap: break-word;">ข้อความ</div>
+                  <!-- แถวรายละเอียดข้อความ (เยื้องด้านซ้าย 50px เพื่อความบาลานซ์ และบีบขอบด้านขวาอัตโนมัติ ไม่ล้นขอบขวาแน่นอน) -->
+                  <div id="out-body" class="mt-6 text-[16px] text-justify leading-relaxed whitespace-pre-wrap ml-[50px] break-all" style="word-break: break-all; overflow-wrap: break-word;">ข้อความ</div>
                 </div>
 
                 <!-- ส่วนประวัติลายมือชื่อผู้อนุมัติท้ายกระดาษ (ป้องกันการซ้อนกัน 100%) -->
@@ -337,7 +337,7 @@
     </div>
   </div>
 
-  <script>
+  <script {nonce}>
     // สตาร์ทโหลดหน้าจอกระดาษครั้งแรก
     window.onload = function() {
       syncText(); // อัปเดตข้อความพรีวิว
