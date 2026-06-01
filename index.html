@@ -4,196 +4,320 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบจัดทำเอกสารและรายงานจำลอง</title>
+  
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- เปลี่ยนมาใช้ html-to-image ที่จัดการฟอนต์ภาษาไทยและ Layout ได้แม่นยำกว่า html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  
   <style>
     body {
       font-family: 'Prompt', sans-serif;
+      background-color: #fef2f2; /* พื้นหลังแดงอ่อนๆ / ขาว (ไม่มืด) */
     }
-    .doc-font {
-      font-family: 'Sarabun', sans-serif;
-    }
-    /* คอนเทนเนอร์ควบคุม Canvas ให้ยืดหยุ่นตามหน้าจอมือถือและอุปกรณ์ต่างๆ */
-    .canvas-wrapper {
-      max-width: 100%;
-      height: auto;
-      aspect-ratio: 1 / 1.4142; /* สัดส่วน A4 */
-    }
-    canvas {
-      width: 100% !important;
-      height: auto !important;
+
+    /* โครงสร้างกระดาษ A4 สำหรับการดาวน์โหลด (ล็อกขนาดพิกเซลตายตัวเพื่อความแม่นยำ) */
+    .a4-paper {
+      width: 794px;
+      height: 1123px;
       background-color: #ffffff;
-      box-shadow: 0 10px 30px rgba(185, 28, 28, 0.12);
-      border-radius: 4px;
+      position: relative;
+      font-family: 'Sarabun', sans-serif;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(185, 28, 28, 0.15);
+      /* เราใช้การ Padding ที่ Container แทน เพื่อให้คุมขอบได้ง่าย */
+      padding: 75px;
+      box-sizing: border-box;
+    }
+
+    /* ลายน้ำตรงกลางแผ่น */
+    .watermark-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0.12;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* เลเยอร์เนื้อหา (ให้อยู่เหนือลายน้ำ) */
+    .content-layer {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ตัวช่วยห่อหุ้มสำหรับการย่อ/ขยายในหน้าพรีวิว */
+    #preview-wrapper {
+      transform-origin: top center;
+      transition: transform 0.1s ease;
+    }
+
+    /* ปรับเส้นประลายเซ็น */
+    .sign-dashed {
+      border-bottom: 1.5px dashed #cbd5e1;
+      flex-grow: 1;
+      margin: 0 8px;
     }
   </style>
 </head>
-<body class="bg-red-50/10 min-h-screen text-slate-800">
+<body class="text-slate-800">
 
-  <!-- แถบเมนูด้านบนโทน แดง-ทอง-ขาว สว่าง ไม่มืด -->
-  <header class="bg-gradient-to-r from-red-700 via-red-600 to-amber-500 text-white shadow-lg border-b-4 border-amber-400 py-4 px-6">
+  <!-- แถบเมนูด้านบน (แดง-ทอง-ขาว สว่างและดูพรีเมียม) -->
+  <header class="bg-gradient-to-r from-red-700 via-red-600 to-amber-500 text-white shadow-lg border-b-4 border-amber-400 py-4 px-6 relative z-20">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-4">
-        <div class="bg-white p-2 rounded-full shadow-md border border-amber-300">
+        <div class="bg-white p-2 rounded-full shadow-md border-2 border-amber-300">
           <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
           </svg>
         </div>
         <div>
-          <h1 class="text-2xl font-black tracking-wide drop-shadow-md">ระบบจัดทำเอกสารและรายงานจำลอง</h1>
-          <p class="text-sm text-red-100 font-medium">ระบบประมวลผลผ่านผ้าใบนำเสนอภาพแบบแบน (Flat Canvas Rendering) หมดกังวลเรื่องตัวอักษรซ้อนทับกัน</p>
+          <h1 class="text-xl md:text-2xl font-black tracking-wide drop-shadow-md">ระบบจัดทำเอกสารและรายงานจำลอง</h1>
+          <p class="text-xs md:text-sm text-red-100 font-medium">การันตีภาพที่ดาวน์โหลดจะตรงกับสิ่งที่เห็น 100% (ไม่ซ้อน, ไม่ทับ, ไม่เบี้ยว)</p>
         </div>
       </div>
-      <div class="bg-white text-red-950 font-bold px-4 py-2 rounded-xl border border-amber-300 shadow-sm text-xs">
-        👑 ระบบเรนเดอร์มาตรฐาน A4 (PNG)
+      <div class="bg-white text-red-900 font-bold px-4 py-2 rounded-xl border border-amber-300 shadow-sm text-xs">
+        ✅ ระบบโคลนอัจฉริยะ (WYSIWYG)
       </div>
     </div>
   </header>
 
-  <!-- ส่วนเนื้อหาหลักและฟอร์มต่างๆ -->
   <main class="max-w-7xl mx-auto px-4 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       
-      <!-- ส่วนที่ 1: แบบฟอร์มกรอกข้อมูล (ฝั่งซ้าย) -->
-      <section class="lg:col-span-5 bg-white rounded-2xl shadow-md border border-red-100 p-6 space-y-6">
+      <!-- ================= ฝั่งซ้าย: ฟอร์มกรอกข้อมูล ================= -->
+      <section class="lg:col-span-5 bg-white rounded-2xl shadow-md border border-red-200 p-6 space-y-6 relative z-20">
+        
         <div class="border-b-2 border-amber-100 pb-3">
-          <h2 class="text-xl font-bold text-red-800 flex items-center gap-2">
-            ✍️ รายละเอียดข้อมูลเอกสาร
+          <h2 class="text-lg font-bold text-red-800 flex items-center gap-2">
+            ⚙️ ข้อมูลระบุในเอกสาร
           </h2>
         </div>
 
-        <!-- กล่องอัปโหลดรูปภาพตราสัญลักษณ์ -->
-        <div class="bg-red-50/40 p-4 rounded-xl border border-red-100 space-y-3">
-          <label class="block text-sm font-bold text-red-900">1. อัปโหลดรูปภาพตราสัญลักษณ์ของคุณ *</label>
-          <p class="text-xs text-slate-600">เมื่อทำเสร็จภาพตราหลักและภาพลายน้ำจะถูกวาดลงบนแผ่นเอกสารโดยไม่มีส่วนกรอบสี่เหลี่ยมสีเหลืองรบกวน</p>
-          
+        <!-- 1. อัปโหลดภาพตราสัญลักษณ์ -->
+        <div class="bg-red-50/50 rounded-xl p-4 border border-red-100 space-y-3">
+          <label class="block text-sm font-bold text-red-900">1. อัปโหลดตราสัญลักษณ์ (PNG)</label>
           <div class="flex items-center justify-center w-full">
-            <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-28 border-2 border-red-200 border-dashed rounded-lg cursor-pointer bg-white hover:bg-red-50/20 transition-all">
+            <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-24 border-2 border-red-200 border-dashed rounded-lg cursor-pointer bg-white hover:bg-red-50 transition-all">
               <div class="text-center px-4">
-                <p class="text-xs text-red-700 font-bold">📁 เลือกหรือลากไฟล์ภาพตราสัญลักษณ์มาวางที่นี่</p>
-                <p class="text-[10px] text-slate-400 mt-1">ประเภทไฟล์แนะนำ: PNG พื้นหลังโปร่งใส</p>
+                <p class="text-xs text-red-700 font-bold">📁 คลิกเพื่อเลือกไฟล์ตราสัญลักษณ์</p>
+                <p class="text-[10px] text-slate-400 mt-1">จะแสดงเป็นตราหลักและลายน้ำโดยไม่มีขอบเหลือง</p>
               </div>
               <input id="imageUpload" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
             </label>
           </div>
-
-          <!-- แถบแสดงสถานะตราสัญลักษณ์ที่เลือก -->
-          <div id="imageStatusContainer" class="hidden flex items-center justify-between bg-white p-2 border border-red-100 rounded-lg">
+          <!-- สถานะการอัปโหลด -->
+          <div id="imageStatusContainer" class="hidden flex items-center justify-between bg-white p-2 rounded-lg border border-red-100">
             <div class="flex items-center gap-2">
               <img id="thumbPreview" class="h-8 w-8 object-contain" />
               <p class="font-bold text-xs text-slate-700 truncate max-w-[150px]" id="fileNameLabel"></p>
             </div>
-            <button type="button" onclick="clearUploadedImage()" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">ลบออก</button>
+            <button type="button" onclick="clearUploadedImage()" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold hover:bg-red-200">ลบออก</button>
           </div>
         </div>
 
-        <!-- ฟิลด์รายละเอียดข้อความ -->
+        <!-- 2. ข้อมูลทั่วไป -->
         <div class="space-y-4">
-          <h3 class="text-xs font-bold text-amber-600 uppercase border-l-2 border-red-600 pl-2">ข้อมูลส่วนหัวเอกสาร</h3>
-          
+          <h3 class="text-xs font-bold text-amber-600 uppercase border-l-2 border-red-500 pl-2">ส่วนหัวและเนื้อหา</h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1">ใส่ข้อความและวันที่ (ซ้ายบน)</label>
-              <input type="text" id="inputLeftHeader" value="ใส่ข้อความและวันที่" oninput="drawDocument()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
+              <label class="block text-xs font-bold text-slate-600 mb-1">ข้อความ (ซ้ายบน)</label>
+              <input type="text" id="in-left-header" value="ใส่ข้อความ และวันที่" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1">ใส่ชื่อสังกัด 1 (ขวาบน)</label>
-              <input type="text" id="inputRightHeader" value="ใส่ชื่อสังกัด1" oninput="drawDocument()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
+              <label class="block text-xs font-bold text-slate-600 mb-1">ชื่อสังกัด 1 (ขวาบน)</label>
+              <input type="text" id="in-right-header" value="ใส่ชื่อสังกัด1" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
             </div>
           </div>
-          
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-slate-600 mb-1">วันที่ (ขวาบนแผ่น)</label>
-              <input type="text" id="inputDate" value="วันที่ /  /  /" oninput="drawDocument()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
+              <input type="text" id="in-date" value="วันที่ /  /  /" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-600 mb-1">ชื่อสังกัด/กรม (กลางหน้า)</label>
-              <input type="text" id="inputMainDept" value="ชื่อสังกัด/กรม" oninput="drawDocument()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
+              <input type="text" id="in-main-dept" value="ชื่อสังกัด/กรม" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
             </div>
           </div>
-
-          <h3 class="text-xs font-bold text-amber-600 uppercase border-l-2 border-red-600 pl-2">หัวข้อและเนื้อหาเอกสาร</h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-slate-600 mb-1">เรียน</label>
-              <input type="text" id="inputTo" value="<>" oninput="drawDocument()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
+              <input type="text" id="in-to" value="<>" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-600 mb-1">เรื่อง</label>
-              <input type="text" id="inputSubject" value="<>" oninput="drawDocument()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
+              <input type="text" id="in-subject" value="<>" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none" />
             </div>
           </div>
-
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">รายละเอียดข้อความ (เนื้อเรื่อง)</label>
-            <textarea id="inputTextBody" rows="4" oninput="drawDocument()" class="w-full text-sm px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none resize-y">ข้อความ</textarea>
+            <label class="block text-xs font-bold text-slate-600 mb-1">ข้อความรายละเอียดในเอกสาร</label>
+            <textarea id="in-body" rows="3" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none resize-y">ข้อความ</textarea>
           </div>
         </div>
 
-        <!-- รายละเอียดรายนามท้ายเอกสาร -->
-        <div class="space-y-4 pt-2">
-          <h3 class="text-xs font-bold text-amber-600 uppercase border-l-2 border-red-600 pl-2">รายนามผู้อนุมัติท้ายเอกสาร</h3>
+        <!-- 3. รายนามผู้อนุมัติ -->
+        <div class="space-y-3 pt-2">
+          <h3 class="text-xs font-bold text-amber-600 uppercase border-l-2 border-red-500 pl-2">รายนามท้ายเอกสาร</h3>
           
-          <!-- บล็อกที่ 1 (ซ้ายกลาง) -->
-          <div class="p-3 bg-red-50/20 border border-red-100 rounded-lg space-y-2">
+          <!-- บล็อก 1 -->
+          <div class="p-3 bg-red-50/30 border border-red-100 rounded-lg space-y-2">
             <span class="text-xs font-bold text-red-800 block">👤 บล็อกซ้ายกลาง (ผู้อนุมัติ)</span>
             <div class="grid grid-cols-2 gap-2">
-              <input type="text" id="inputSign1Rank" value="ยศ" oninput="drawDocument()" class="text-xs p-1.5 border rounded" placeholder="ยศ" />
-              <input type="text" id="inputSign1Title" value="ผู้อนุมัติ" oninput="drawDocument()" class="text-xs p-1.5 border rounded font-bold text-red-700" placeholder="ตำแหน่งหัวข้อ" />
+              <input type="text" id="in-s1-rank" value="ยศ" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white" placeholder="ยศ" />
+              <input type="text" id="in-s1-title" value="ผู้อนุมัติ" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white font-bold text-red-700" placeholder="ตำแหน่ง" />
             </div>
-            <input type="text" id="inputSign1Name" value="(ชื่อผู้เล่น)" oninput="drawDocument()" class="text-xs p-1.5 border rounded w-full" placeholder="ชื่อ-นามสกุล" />
-            <input type="text" id="inputSign1Position" value="ตำแหน่งภายในสังกัด" oninput="drawDocument()" class="text-xs p-1.5 border rounded w-full" placeholder="ตำแหน่งงาน" />
+            <input type="text" id="in-s1-name" value="(ชื่อผู้เล่น)" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="ชื่อ-นามสกุล" />
+            <input type="text" id="in-s1-pos" value="ตำแหน่งภายในสังกัด" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="หน้าที่" />
           </div>
 
-          <!-- บล็อกที่ 2 (ขวากลาง) -->
-          <div class="p-3 bg-red-50/20 border border-red-100 rounded-lg space-y-2">
+          <!-- บล็อก 2 -->
+          <div class="p-3 bg-red-50/30 border border-red-100 rounded-lg space-y-2">
             <span class="text-xs font-bold text-red-800 block">👤 บล็อกขวากลาง (ผู้ออกเอกสาร)</span>
             <div class="grid grid-cols-2 gap-2">
-              <input type="text" id="inputSign2Rank" value="ยศ" oninput="drawDocument()" class="text-xs p-1.5 border rounded" placeholder="ยศ" />
-              <input type="text" id="inputSign2Title" value="ผู้ออกเอกสาร" oninput="drawDocument()" class="text-xs p-1.5 border rounded font-bold text-red-700" placeholder="ตำแหน่งหัวข้อ" />
+              <input type="text" id="in-s2-rank" value="ยศ" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white" placeholder="ยศ" />
+              <input type="text" id="in-s2-title" value="ผู้ออกเอกสาร" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white font-bold text-red-700" placeholder="ตำแหน่ง" />
             </div>
-            <input type="text" id="inputSign2Name" value="(ชื่อผู้เล่น)" oninput="drawDocument()" class="text-xs p-1.5 border rounded w-full" placeholder="ชื่อ-นามสกุล" />
-            <input type="text" id="inputSign2Position" value="ตำแหน่งภายในสังกัด" oninput="drawDocument()" class="text-xs p-1.5 border rounded w-full" placeholder="ตำแหน่งงาน" />
+            <input type="text" id="in-s2-name" value="(ชื่อผู้เล่น)" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="ชื่อ-นามสกุล" />
+            <input type="text" id="in-s2-pos" value="ตำแหน่งภายในสังกัด" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="หน้าที่" />
           </div>
 
-          <!-- บล็อกที่ 3 (ซ้ายล่างสุด) -->
-          <div class="p-3 bg-red-50/20 border border-red-100 rounded-lg space-y-2">
+          <!-- บล็อก 3 -->
+          <div class="p-3 bg-red-50/30 border border-red-100 rounded-lg space-y-2">
             <span class="text-xs font-bold text-red-800 block">👤 บล็อกซ้ายล่างสุด (ผู้อนุมัติเพิ่มเติม)</span>
             <div class="grid grid-cols-2 gap-2">
-              <input type="text" id="inputSign3Rank" value="ยศ" oninput="drawDocument()" class="text-xs p-1.5 border rounded" placeholder="ยศ" />
-              <input type="text" id="inputSign3Title" value="ผู้อนุมัติ" oninput="drawDocument()" class="text-xs p-1.5 border rounded font-bold text-red-700" placeholder="ตำแหน่งหัวข้อ" />
+              <input type="text" id="in-s3-rank" value="ยศ" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white" placeholder="ยศ" />
+              <input type="text" id="in-s3-title" value="ผู้อนุมัติ" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white font-bold text-red-700" placeholder="ตำแหน่ง" />
             </div>
-            <input type="text" id="inputSign3Name" value="(ชื่อผู้เล่น)" oninput="drawDocument()" class="text-xs p-1.5 border rounded w-full" placeholder="ชื่อ-นามสกุล" />
-            <input type="text" id="inputSign3Position" value="ตำแหน่งภายในสังกัด" oninput="drawDocument()" class="text-xs p-1.5 border rounded w-full" placeholder="ตำแหน่งงาน" />
+            <input type="text" id="in-s3-name" value="(ชื่อผู้เล่น)" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="ชื่อ-นามสกุล" />
+            <input type="text" id="in-s3-pos" value="ตำแหน่งภายในสังกัด" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="หน้าที่" />
           </div>
         </div>
 
-        <!-- ปุ่มดาวน์โหลดภาพเอกสาร -->
-        <button type="button" onclick="downloadCanvasImage()" class="w-full py-4 px-6 bg-gradient-to-r from-red-600 via-red-700 to-amber-500 hover:from-red-500 hover:to-amber-500 text-white rounded-xl font-extrabold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
+        <button type="button" onclick="downloadImage()" class="w-full py-4 px-6 bg-gradient-to-r from-red-600 via-red-700 to-amber-500 hover:from-red-500 hover:to-amber-500 text-white rounded-xl font-extrabold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
           💾 ดาวน์โหลดภาพเอกสาร (PNG)
         </button>
       </section>
 
-      <!-- ส่วนที่ 2: พรีวิวผ้าใบ A4 แนวดิ่ง (ฝั่งขวา) -->
-      <section class="lg:col-span-7 flex flex-col items-center w-full">
-        <div class="w-full flex items-center justify-between mb-4 bg-white p-3 rounded-xl border border-red-100 shadow-sm">
+      <!-- ================= ฝั่งขวา: พรีวิว A4 ================= -->
+      <section class="lg:col-span-7 flex flex-col items-center w-full relative">
+        <div class="w-full flex items-center justify-between mb-4 bg-white p-3 rounded-xl border border-red-100 shadow-sm relative z-20">
           <span class="text-sm font-bold text-red-800 flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-            ภาพผลลัพธ์จริง (What You See Is What You Get)
+            มุมมองกระดาษ (พรีวิว)
           </span>
-          <span class="text-xs bg-amber-100 text-amber-900 font-bold px-2 py-1 rounded">สัดส่วน A4 เสมือนจริง</span>
         </div>
 
-        <!-- กล่องจำลองขนาดเฟรมย่อขยายกระดาษ A4 เสมือนจริง -->
-        <div class="w-full bg-slate-200/50 p-4 rounded-2xl border border-slate-300/80 flex items-center justify-center overflow-hidden">
-          <div class="canvas-wrapper w-full">
-            <!-- Canvas วาดโครงสร้างเอกสารทั้งหมด ป้องกันการซ้อนทับกันอย่างถาวร -->
-            <canvas id="a4Canvas" width="1240" height="1754"></canvas>
+        <!-- หน้าต่างสำหรับพรีวิวที่จะย่อสเกลตามหน้าจอ -->
+        <div id="preview-container" class="w-full bg-slate-200/50 p-4 rounded-2xl border border-slate-300 flex justify-center overflow-hidden">
+          
+          <div id="preview-wrapper">
+            <!-- ================= แผ่นกระดาษ A4 ของจริง (จะถูก Capture) ================= -->
+            <div id="a4-document" class="a4-paper">
+              
+              <!-- ลายน้ำ (จะแสดงก็ต่อเมื่ออัปโหลดรูป) -->
+              <div class="watermark-layer">
+                <img id="out-watermark" style="display: none; width: 450px; height: 450px; object-fit: contain;" />
+              </div>
+
+              <!-- เนื้อหาทั้งหมดของหน้ากระดาษ (จัด Layout อย่างเป็นระเบียบ) -->
+              <div class="content-layer flex flex-col justify-between">
+                
+                <div>
+                  <!-- แถวบนซ้าย - ขวา -->
+                  <div class="flex justify-between items-start text-[16px]">
+                    <div id="out-left-header" class="w-[45%] whitespace-pre-wrap leading-snug">ใส่ข้อความ และวันที่</div>
+                    <div class="w-[45%] text-right space-y-1">
+                      <div id="out-right-header" class="whitespace-pre-wrap leading-snug font-medium">ใส่ชื่อสังกัด1</div>
+                      <div id="out-date" class="leading-snug">วันที่ /  /  /</div>
+                    </div>
+                  </div>
+
+                  <!-- ตราสัญลักษณ์ (ตรงกลาง) -->
+                  <div class="flex justify-center mt-6">
+                    <div class="w-[130px] h-[130px] flex items-center justify-center relative">
+                      <div id="logo-placeholder" class="text-[11px] text-red-700/50 border border-dashed border-red-200 bg-red-50/20 px-3 py-5 rounded-lg text-center font-bold">
+                        [ ตราสัญลักษณ์ ]
+                      </div>
+                      <img id="out-logo" style="display: none; width: 100%; height: 100%; object-fit: contain;" />
+                    </div>
+                  </div>
+
+                  <!-- ชื่อสังกัด/กรม (กลางหน้า) -->
+                  <div id="out-main-dept" class="text-center font-bold text-[22px] mt-4 leading-snug">ชื่อสังกัด/กรม</div>
+
+                  <!-- เรียน / เรื่อง -->
+                  <div class="mt-10 space-y-2 text-[16px]">
+                    <div class="flex items-start">
+                      <span class="font-bold w-[75px] shrink-0">เรียน</span>
+                      <span id="out-to" class="break-words flex-1"><></span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="font-bold w-[75px] shrink-0">เรื่อง</span>
+                      <span id="out-subject" class="break-words flex-1"><></span>
+                    </div>
+                  </div>
+
+                  <!-- ข้อความ (ย่อหน้า) -->
+                  <div id="out-body" class="mt-6 text-[16px] text-justify leading-relaxed whitespace-pre-wrap pl-[75px]">ข้อความ</div>
+                </div>
+
+                <!-- ส่วนลายเซ็น (จัดเรียงโดยใช้ Flexbox ควบคุมระยะห่าง ป้องกันการทับซ้อนเด็ดขาด) -->
+                <div class="space-y-12">
+                  <!-- แถวกลาง (บล็อก 1 ซ้าย, บล็อก 2 ขวา) -->
+                  <div class="flex justify-between px-6">
+                    <!-- บล็อก 1 -->
+                    <div class="w-[240px] text-center flex flex-col items-center">
+                      <div class="w-full flex items-center mb-1">
+                        <span id="out-s1-rank" class="text-slate-400 font-bold text-[15px]">ยศ</span>
+                        <div class="sign-dashed"></div>
+                        <span id="out-s1-title" class="font-bold text-red-700 text-[15px]">ผู้อนุมัติ</span>
+                      </div>
+                      <div id="out-s1-name" class="pt-6 font-bold text-[18px]"></div>
+                      <div id="out-s1-pos" class="text-[14px] text-slate-500 mt-1"></div>
+                    </div>
+
+                    <!-- บล็อก 2 -->
+                    <div class="w-[240px] text-center flex flex-col items-center">
+                      <div class="w-full flex items-center mb-1">
+                        <span id="out-s2-rank" class="text-slate-400 font-bold text-[15px]">ยศ</span>
+                        <div class="sign-dashed"></div>
+                        <span id="out-s2-title" class="font-bold text-red-700 text-[15px]">ผู้ออกเอกสาร</span>
+                      </div>
+                      <div id="out-s2-name" class="pt-6 font-bold text-[18px]"></div>
+                      <div id="out-s2-pos" class="text-[14px] text-slate-500 mt-1"></div>
+                    </div>
+                  </div>
+
+                  <!-- แถวล่างสุด (บล็อก 3 ซ้าย) -->
+                  <div class="flex justify-start px-6">
+                    <!-- บล็อก 3 -->
+                    <div class="w-[240px] text-center flex flex-col items-center">
+                      <div class="w-full flex items-center mb-1">
+                        <span id="out-s3-rank" class="text-slate-400 font-bold text-[15px]">ยศ</span>
+                        <div class="sign-dashed"></div>
+                        <span id="out-s3-title" class="font-bold text-red-700 text-[15px]">ผู้อนุมัติ</span>
+                      </div>
+                      <div id="out-s3-name" class="pt-6 font-bold text-[18px]"></div>
+                      <div id="out-s3-pos" class="text-[14px] text-slate-500 mt-1"></div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -201,261 +325,146 @@
     </div>
   </main>
 
-  <!-- ฟอนต์ไทยจำลองสำหรับการประมวลผลวาดข้อความของ HTML5 Canvas ให้แม่นยำ -->
+  <!-- มอดอลสถานะการดาวน์โหลด -->
+  <div id="loadingModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl border-t-4 border-red-600">
+      <h3 class="text-lg font-bold text-slate-900 mb-2">กำลังจัดเตรียมรูปภาพ 100% WYSIWYG...</h3>
+      <p class="text-xs text-slate-500">ระบบกำลังทำสำเนาภาพในขนาดจริง ป้องกันตัวอักษรผิดเพี้ยน...</p>
+    </div>
+  </div>
+
   <script>
-    let uploadedImage = null; // ตัวแปรเก็บ Image object ของตราสัญลักษณ์ที่เลือก
-    let hasUploaded = false;
+    // เมื่อโหลดหน้าเสร็จ
+    window.onload = function() {
+      syncText(); // อัปเดตข้อความเริ่มต้น
+      handleResize(); // ปรับสเกลหน้าพรีวิวให้พอดีจอ
+    };
 
-    // รันระบบวาด Canvas ทันทีที่โหลดฟอนต์ทั้งหมดเสร็จสมบูรณ์
-    document.fonts.ready.then(function () {
-      drawDocument();
-    });
+    // ทำให้หน้าต่าง A4 พรีวิวย่อขนาดลงมาพอดีกับหน้าจอมือถือ/แท็บเล็ต โดยรักษาขนาดจริงไว้
+    function handleResize() {
+      const container = document.getElementById('preview-container');
+      const wrapper = document.getElementById('preview-wrapper');
+      
+      // ความกว้างของกล่องแม่ หักลบ padding
+      const containerWidth = container.clientWidth - 32; 
+      
+      // คำนวณสเกลเทียบกับกระดาษ A4 (กว้าง 794px)
+      let scale = containerWidth / 794;
+      if (scale > 1) scale = 1; // ไม่ขยายใหญ่เกิน 100%
+      
+      wrapper.style.transform = `scale(${scale})`;
+      // ปรับความสูงของกล่องแม่ให้พอดีกับลูกที่ถูกย่อสเกล
+      wrapper.style.height = `${1123 * scale}px`;
+      container.style.height = `${(1123 * scale) + 32}px`;
+    }
+    
+    // ดักจับการย่อ/ขยายหน้าต่างเบราว์เซอร์
+    window.addEventListener('resize', handleResize);
 
-    // ตรวจจับและอัปโหลดรูปภาพตราสัญลักษณ์
+    // อัปโหลดและแสดงผลรูปภาพตรา
     function handleImageUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function (e) {
-        const img = new Image();
-        img.onload = function() {
-          uploadedImage = img;
-          hasUploaded = true;
-          
-          // แสดงสถานะไฟล์ภาพและอัปเดตระบบพรีวิว
-          document.getElementById('imageStatusContainer').classList.remove('hidden');
-          document.getElementById('fileNameLabel').innerText = file.name;
-          document.getElementById('thumbPreview').src = e.target.result;
-          
-          drawDocument(); // สั่งให้อัปเดตวาดตราสัญลักษณ์และลายน้ำทันที
-        };
-        img.src = e.target.result;
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        
+        // ใส่ภาพเข้าหน้ากระดาษ
+        const outLogo = document.getElementById('out-logo');
+        const outWatermark = document.getElementById('out-watermark');
+        
+        outLogo.src = dataUrl;
+        outLogo.style.display = 'block';
+        document.getElementById('logo-placeholder').style.display = 'none';
+        
+        outWatermark.src = dataUrl;
+        outWatermark.style.display = 'block';
+
+        // แสดงพรีวิวรูปฝั่งซ้ายมือ
+        document.getElementById('imageStatusContainer').classList.remove('hidden');
+        document.getElementById('thumbPreview').src = dataUrl;
+        document.getElementById('fileNameLabel').innerText = file.name;
       };
       reader.readAsDataURL(file);
     }
 
-    // ล้างรูปภาพที่นำออก
+    // ลบรูปภาพตราออก
     function clearUploadedImage() {
-      uploadedImage = null;
-      hasUploaded = false;
-      document.getElementById('imageUpload').value = "";
+      document.getElementById('out-logo').style.display = 'none';
+      document.getElementById('out-logo').src = '';
+      document.getElementById('logo-placeholder').style.display = 'block';
+      
+      document.getElementById('out-watermark').style.display = 'none';
+      document.getElementById('out-watermark').src = '';
+      
+      document.getElementById('imageUpload').value = '';
       document.getElementById('imageStatusContainer').classList.add('hidden');
-      drawDocument(); // ทำความสะอาดหน้ากระดาษ
     }
 
-    // ฟังก์ชันวาดเอกสารทั้งหมดลงบนแผ่นผืนผ้าใบ HTML5 Canvas อย่างเสถียรที่สุด
-    function drawDocument() {
-      const canvas = document.getElementById('a4Canvas');
-      const ctx = canvas.getContext('2d');
+    // อัปเดตข้อความจากฝั่งซ้าย (ฟอร์ม) ไปยังกระดาษพรีวิว (ฝั่งขวา)
+    function syncText() {
+      document.getElementById('out-left-header').innerText = document.getElementById('in-left-header').value;
+      document.getElementById('out-right-header').innerText = document.getElementById('in-right-header').value;
+      document.getElementById('out-date').innerText = document.getElementById('in-date').value;
+      document.getElementById('out-main-dept').innerText = document.getElementById('in-main-dept').value;
+      document.getElementById('out-to').innerText = document.getElementById('in-to').value;
+      document.getElementById('out-subject').innerText = document.getElementById('in-subject').value;
+      document.getElementById('out-body').innerText = document.getElementById('in-body').value;
 
-      // 1. เคลียร์ผ้าใบและเติมพื้นหลังกระดาษสีขาวบริสุทธิ์
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // 2. วาดภาพลายน้ำตรงกึ่งกลางกระดาษ (ถ้ามีการอัปโหลดตรา)
-      if (hasUploaded && uploadedImage) {
-        ctx.save();
-        ctx.globalAlpha = 0.12; // ลายน้ำโปร่งใส 12% 
-        
-        const targetWatermarkWidth = 600; // ขนาดความกว้างตราลายน้ำตรงกลางแผ่น
-        const targetWatermarkHeight = (uploadedImage.height / uploadedImage.width) * targetWatermarkWidth;
-        
-        const watermarkX = (canvas.width - targetWatermarkWidth) / 2;
-        const watermarkY = (canvas.height - targetWatermarkHeight) / 2;
-        
-        ctx.drawImage(uploadedImage, watermarkX, watermarkY, targetWatermarkWidth, targetWatermarkHeight);
-        ctx.restore();
+      // รายนาม
+      for(let i=1; i<=3; i++) {
+        document.getElementById(`out-s${i}-rank`).innerText = document.getElementById(`in-s${i}-rank`).value;
+        document.getElementById(`out-s${i}-title`).innerText = document.getElementById(`in-s${i}-title`).value;
+        document.getElementById(`out-s${i}-name`).innerText = document.getElementById(`in-s${i}-name`).value;
+        document.getElementById(`out-s${i}-pos`).innerText = document.getElementById(`in-s${i}-pos`).value;
       }
-
-      // 3. เริ่มต้นจัดวางข้อความต่าง ๆ ด้วยฟอนต์มาตรฐาน Sarabun 
-      ctx.fillStyle = '#000000'; // สีตัวอักษรเป็นสีดำสนิท
-      ctx.textBaseline = 'top';
-
-      // --- ส่วนหัวข้อความซ้ายบน ---
-      const leftHeaderVal = document.getElementById('inputLeftHeader').value;
-      ctx.font = '24px Sarabun';
-      wrapText(ctx, leftHeaderVal, 100, 100, 450, 32);
-
-      // --- ส่วนชื่อสังกัดและวันที่ด้านขวาบน ---
-      const rightHeaderVal = document.getElementById('inputRightHeader').value;
-      const dateVal = document.getElementById('inputDate').value;
-      ctx.textAlign = 'right';
-      ctx.font = '24px Sarabun';
-      wrapText(ctx, rightHeaderVal, canvas.width - 100, 100, 450, 32);
-      ctx.fillText(dateVal, canvas.width - 100, 180);
-
-      // รีเซ็ตการชิดขอบตัวอักษรเป็นด้านซ้าย
-      ctx.textAlign = 'left';
-
-      // --- ตราสัญลักษณ์หลัก ด้านบนตรงกลาง (ไม่มีกรอบสี่เหลี่ยมสีเหลืองรบกวน) ---
-      const logoY = 170;
-      if (hasUploaded && uploadedImage) {
-        const targetLogoWidth = 160;
-        const targetLogoHeight = (uploadedImage.height / uploadedImage.width) * targetLogoWidth;
-        const logoX = (canvas.width - targetLogoWidth) / 2;
-        ctx.drawImage(uploadedImage, logoX, logoY, targetLogoWidth, targetLogoHeight);
-      } else {
-        // หากยังไม่ได้อัปโหลดภาพตรา จะแสดงกรอบข้อความสัญลักษณ์ชั่วคราวบนพรีวิว
-        ctx.save();
-        ctx.strokeStyle = '#e2e8f0';
-        ctx.setLineDash([5, 5]);
-        ctx.strokeRect((canvas.width - 160) / 2, logoY, 160, 160);
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '20px Sarabun';
-        ctx.textAlign = 'center';
-        ctx.fillText('[ ตราสัญลักษณ์ ]', canvas.width / 2, logoY + 70);
-        ctx.restore();
-      }
-
-      // --- ชื่อหน่วยงานหลัก/กรม (ตรงกลางหน้า) ---
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 30px Sarabun';
-      const mainDeptVal = document.getElementById('inputMainDept').value;
-      ctx.fillText(mainDeptVal, canvas.width / 2, 360);
-
-      // --- ส่วน เรียน และ เรื่อง ---
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 24px Sarabun';
-      ctx.fillText('เรียน', 100, 450);
-      ctx.fillText('เรื่อง', 100, 500);
-
-      const toVal = document.getElementById('inputTo').value;
-      const subjectVal = document.getElementById('inputSubject').value;
-      ctx.font = '24px Sarabun';
-      ctx.fillText(toVal, 200, 450);
-      ctx.fillText(subjectVal, 200, 500);
-
-      // --- ข้อความรายละเอียดเนื้อเรื่องหลัก ---
-      const textBodyVal = document.getElementById('inputTextBody').value;
-      // ย่อหน้าเนื้อเรื่องเข้าด้านใน 200px (ขอบซ้ายปกติ 100px)
-      wrapText(ctx, textBodyVal, 200, 560, canvas.width - 300, 38);
-
-      // --- ส่วนท้ายของเอกสาร (ส่วนลายเซ็นและกลุ่มคณะอนุมัติ) ---
-      // กำหนดค่าตำแหน่งแนวตั้ง Y คงที่ แยกออกจากเลเยอร์บนเพื่อลดโอกาสการเหลื่อมชนกันของบรรทัด
-      const row1Y = 1250; // แถวผู้ลงชื่อและอนุมัติ 1, 2
-      const row2Y = 1480; // แถวผู้อนุมัติเพิ่มเติม 3
-
-      // ดึงข้อมูลบล็อกที่ 1 (ซ้ายกลาง)
-      const r1SignRank = document.getElementById('inputSign1Rank').value;
-      const r1SignTitle = document.getElementById('inputSign1Title').value;
-      const r1SignName = document.getElementById('inputSign1Name').value;
-      const r1SignPos = document.getElementById('inputSign1Position').value;
-
-      // ดึงข้อมูลบล็อกที่ 2 (ขวากลาง)
-      const r2SignRank = document.getElementById('inputSign2Rank').value;
-      const r2SignTitle = document.getElementById('inputSign2Title').value;
-      const r2SignName = document.getElementById('inputSign2Name').value;
-      const r2SignPos = document.getElementById('inputSign2Position').value;
-
-      // ดึงข้อมูลบล็อกที่ 3 (ซ้ายล่างสุด)
-      const r3SignRank = document.getElementById('inputSign3Rank').value;
-      const r3SignTitle = document.getElementById('inputSign3Title').value;
-      const r3SignName = document.getElementById('inputSign3Name').value;
-      const r3SignPos = document.getElementById('inputSign3Position').value;
-
-      // บล็อกที่ 1 (ซ้ายกลาง): พิกัดแกน X กึ่งกลางที่ 280
-      drawSignatureBox(ctx, 280, row1Y, r1SignRank, r1SignTitle, r1SignName, r1SignPos);
-
-      // บล็อกที่ 2 (ขวากลาง): พิกัดแกน X กึ่งกลางที่ canvas.width - 280 (960)
-      drawSignatureBox(ctx, canvas.width - 280, row1Y, r2SignRank, r2SignTitle, r2SignName, r2SignPos);
-
-      // บล็อกที่ 3 (ซ้ายล่างสุด): พิกัดแกน X กึ่งกลางที่ 280
-      drawSignatureBox(ctx, 280, row2Y, r3SignRank, r3SignTitle, r3SignName, r3SignPos);
     }
 
-    // ฟังก์ชันเสริมสำหรับแยกขีดเส้นลายเซ็น ยศ ตำแหน่ง แบบจำลองให้เป็นระเบียบ ไม่เบี้ยวแน่นอน
-    function drawSignatureBox(ctx, centerX, Y, rank, title, name, position) {
-      ctx.save();
-      ctx.textAlign = 'center';
-      
-      // วาด ยศ และ ตำแหน่งหัวข้อเรื่อง
-      ctx.font = '22px Sarabun';
-      ctx.fillStyle = '#64748b'; // สียศรอง
-      
-      // คำนวณความกว้างเพื่อวาดเส้นประของลายเซ็นด้านหลังยศและตำแหน่ง
-      const rankWidth = ctx.measureText(rank).width;
-      const titleWidth = ctx.measureText(title).width;
-      
-      // วาด ยศ (ชิดซ้ายของกล่องลายเซ็น)
-      ctx.fillText(rank, centerX - 120 + (rankWidth / 2), Y);
-      
-      // วาดคำระบุความรับผิดชอบ (ชิดขวาของกล่องลายเซ็น)
-      ctx.fillStyle = '#b91c1c'; // สีแดงของผู้อนุมัติ/ผู้ลงนาม
-      ctx.font = 'bold 22px Sarabun';
-      ctx.fillText(title, centerX + 120 - (titleWidth / 2), Y);
-      
-      // วาดเส้นประเชื่อมต่อกึ่งกลาง
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.setLineDash([4, 4]);
-      ctx.moveTo(centerX - 100 + rankWidth, Y + 15);
-      ctx.lineTo(centerX + 100 - titleWidth, Y + 15);
-      ctx.stroke();
-      
-      // วาดชื่อ-นามสกุล เต็ม (บรรทัดถัดลงมา)
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 24px Sarabun';
-      ctx.fillText(name, centerX, Y + 60);
-      
-      // วาดตำแหน่งภายในสังกัด
-      ctx.fillStyle = '#475569';
-      ctx.font = '22px Sarabun';
-      ctx.fillText(position, centerX, Y + 100);
-      
-      ctx.restore();
-    }
+    // กระบวนการโคลนและบันทึกภาพ (แก้ปัญหาตัวอักษรซ้อนทับกันอย่างถาวร)
+    function downloadImage() {
+      const modal = document.getElementById('loadingModal');
+      modal.classList.remove('hidden');
 
-    // ฟังก์ชันวาดตัดคำอัตโนมัติ (Wrap Text) สำหรับรายละเอียดในเอกสาร ป้องกันบรรทัดล้นกระดาษ
-    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-      const words = text.split('\n');
-      let currentY = y;
+      // 1. ดึงกระดาษหน้าหลัก
+      const originalDoc = document.getElementById('a4-document');
+      
+      // 2. ทำสำเนา (Clone) ข้อมูลในกระดาษทั้งหมด
+      const cloneDoc = originalDoc.cloneNode(true);
+      
+      // 3. กำหนด Style ให้ Clone ลอยอยู่นอกหน้าจอ เพื่อให้มันเรนเดอร์ในขนาด A4 จริงๆ 100% 
+      // โดยไม่โดน CSS Transform บีบสเกลจนทำให้พิกัดตัวอักษรเพี้ยน
+      cloneDoc.style.position = 'fixed';
+      cloneDoc.style.top = '0';
+      cloneDoc.style.left = '-9999px';
+      cloneDoc.style.transform = 'none'; // ปลดล็อคการย่อสเกลทั้งหมด
+      
+      document.body.appendChild(cloneDoc);
 
-      for (let i = 0; i < words.length; i++) {
-        let line = '';
-        let word = words[i];
-
-        // กรณีบรรทัดว่าง (ขึ้นบรรทัดใหม่)
-        if (word === '') {
-          currentY += lineHeight;
-          continue;
-        }
-
-        // ค้นหาอักษรและพิจารณาความกว้างทีละตัว (เนื่องจากภาษาไทยไม่ใช้การเว้นวรรคคำแบบภาษาอังกฤษ)
-        for (let n = 0; n < word.length; n++) {
-          let testLine = line + word[n];
-          let metrics = ctx.measureText(testLine);
-          let testWidth = metrics.width;
+      // 4. ตั้งค่าความชัดและใช้งานไลบรารี html-to-image วาดกระดาษจำลอง
+      setTimeout(() => {
+        htmlToImage.toPng(cloneDoc, { 
+          quality: 1.0,
+          pixelRatio: 2 // ภาพชัดขึ้น 2 เท่า
+        })
+        .then(function (dataUrl) {
+          const link = document.createElement('a');
+          const title = document.getElementById('in-main-dept').value || 'document';
+          link.download = `เอกสาร_${title}.png`;
+          link.href = dataUrl;
+          link.click();
           
-          if (testWidth > maxWidth && n > 0) {
-            ctx.fillText(line, x, currentY);
-            line = word[n];
-            currentY += lineHeight;
-          } else {
-            line = testLine;
-          }
-        }
-        ctx.fillText(line, x, currentY);
-        currentY += lineHeight;
-      }
-    }
-
-    // ฟังก์ชันการดาวน์โหลดภาพเอกสารส่งออกเป็นรูปภาพ PNG คมชัดสูง 100% ตรงตามที่เห็นแน่นอน
-    function downloadCanvasImage() {
-      const canvas = document.getElementById('a4Canvas');
-      const dataUrl = canvas.toDataURL('image/png');
-      
-      const downloadLink = document.createElement('a');
-      const fileName = document.getElementById('inputMainDept').value || 'document';
-      
-      downloadLink.download = `เอกสารเสนออนุมัติ_${fileName}.png`;
-      downloadLink.href = dataUrl;
-      
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+          // ลบกระดาษโคลนทิ้งและปิดหน้าต่างโหลด
+          document.body.removeChild(cloneDoc);
+          modal.classList.add('hidden');
+        })
+        .catch(function (error) {
+          console.error('เกิดข้อผิดพลาด:', error);
+          document.body.removeChild(cloneDoc);
+          modal.classList.add('hidden');
+          alert('เกิดข้อผิดพลาดในการสร้างภาพ กรุณาลองอีกครั้ง');
+        });
+      }, 500); // รอฟอนต์และภาพจัดเตรียมตัวสักครู่
     }
   </script>
 </body>
