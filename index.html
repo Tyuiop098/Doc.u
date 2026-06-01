@@ -13,16 +13,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- เปลี่ยนมาใช้ html-to-image ที่จัดการฟอนต์ภาษาไทยและ Layout ได้แม่นยำกว่า html2canvas -->
+  <!-- html-to-image ประมวลผลการจัดหน้าและฟอนต์ได้อย่างถูกต้องแม่นยำ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   
   <style>
     body {
       font-family: 'Prompt', sans-serif;
-      background-color: #fef2f2; /* พื้นหลังแดงอ่อนๆ / ขาว (ไม่มืด) */
+      background-color: #fef2f2; /* พื้นหลังสีแดง-ครีมอ่อน สว่างสดใส ไม่มืด */
     }
 
-    /* โครงสร้างกระดาษ A4 สำหรับการดาวน์โหลด (ล็อกขนาดพิกเซลตายตัวเพื่อความแม่นยำ) */
+    /* โครงสร้างกระดาษ A4 มาตรฐาน (ขนาด 794x1123 พิกเซลคงที่ เพื่อให้ดาวน์โหลดออกมาได้ภาพที่ตรงกับหน้าจอ 100%) */
     .a4-paper {
       width: 794px;
       height: 1123px;
@@ -30,13 +30,12 @@
       position: relative;
       font-family: 'Sarabun', sans-serif;
       overflow: hidden;
-      box-shadow: 0 10px 25px rgba(185, 28, 28, 0.15);
-      /* เราใช้การ Padding ที่ Container แทน เพื่อให้คุมขอบได้ง่าย */
-      padding: 75px;
+      box-shadow: 0 12px 30px rgba(185, 28, 28, 0.12);
+      padding: 75px; /* ระยะขอบกระดาษมาตรฐานรอบด้าน */
       box-sizing: border-box;
     }
 
-    /* ลายน้ำตรงกลางแผ่น */
+    /* ภาพตราสัญลักษณ์ลายน้ำตรงแกนกลางแผ่น */
     .watermark-layer {
       position: absolute;
       top: 0;
@@ -46,12 +45,12 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      opacity: 0.12;
+      opacity: 0.12; /* ความโปร่งใสของตราลายน้ำ */
       z-index: 1;
       pointer-events: none;
     }
 
-    /* เลเยอร์เนื้อหา (ให้อยู่เหนือลายน้ำ) */
+    /* เลเยอร์เนื้อหา (อยู่เหนือลายน้ำ) */
     .content-layer {
       position: relative;
       z-index: 10;
@@ -59,13 +58,13 @@
       height: 100%;
     }
 
-    /* ตัวช่วยห่อหุ้มสำหรับการย่อ/ขยายในหน้าพรีวิว */
+    /* คอนเทนเนอร์ควบคุมการพรีวิวแบบสเกลยืดหยุ่นในหน้าเว็บ */
     #preview-wrapper {
       transform-origin: top center;
       transition: transform 0.1s ease;
     }
 
-    /* ปรับเส้นประลายเซ็น */
+    /* เส้นประสำหรับระบุลายเซ็น */
     .sign-dashed {
       border-bottom: 1.5px dashed #cbd5e1;
       flex-grow: 1;
@@ -75,7 +74,7 @@
 </head>
 <body class="text-slate-800">
 
-  <!-- แถบเมนูด้านบน (แดง-ทอง-ขาว สว่างและดูพรีเมียม) -->
+  <!-- ส่วนหัวเว็บ (Header) โทนสี แดง - ทอง - ขาว สดใส เป็นมิตรต่อทุกอุปกรณ์ -->
   <header class="bg-gradient-to-r from-red-700 via-red-600 to-amber-500 text-white shadow-lg border-b-4 border-amber-400 py-4 px-6 relative z-20">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-4">
@@ -86,40 +85,42 @@
         </div>
         <div>
           <h1 class="text-xl md:text-2xl font-black tracking-wide drop-shadow-md">ระบบจัดทำเอกสารและรายงานจำลอง</h1>
-          <p class="text-xs md:text-sm text-red-100 font-medium">การันตีภาพที่ดาวน์โหลดจะตรงกับสิ่งที่เห็น 100% (ไม่ซ้อน, ไม่ทับ, ไม่เบี้ยว)</p>
+          <p class="text-xs md:text-sm text-red-100 font-medium">แก้ไขการตัดคำภาษาไทยและจัดขอบเขตตัวอักษรให้อยู่ในระยะที่ถูกต้อง ป้องกันไม่ให้ล้นขอบกระดาษ</p>
         </div>
       </div>
-      <div class="bg-white text-red-900 font-bold px-4 py-2 rounded-xl border border-amber-300 shadow-sm text-xs">
-        ✅ ระบบโคลนอัจฉริยะ (WYSIWYG)
+      <div class="bg-white text-red-950 font-bold px-4 py-2 rounded-xl border border-amber-300 shadow-sm text-xs">
+        ✅ อัปเดต: ระบบล็อกขอบกระดาษ (Anti-Overflow)
       </div>
     </div>
   </header>
 
+  <!-- หน้าเนื้อหาหลักและชุดคำสั่งการกรอกข้อมูล -->
   <main class="max-w-7xl mx-auto px-4 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       
-      <!-- ================= ฝั่งซ้าย: ฟอร์มกรอกข้อมูล ================= -->
+      <!-- ================= ฝั่งซ้าย: ฟอร์มกรอกข้อมูลการจัดตั้งเอกสาร ================= -->
       <section class="lg:col-span-5 bg-white rounded-2xl shadow-md border border-red-200 p-6 space-y-6 relative z-20">
         
         <div class="border-b-2 border-amber-100 pb-3">
           <h2 class="text-lg font-bold text-red-800 flex items-center gap-2">
-            ⚙️ ข้อมูลระบุในเอกสาร
+            ⚙️ รายละเอียดระบุข้อมูลในเอกสาร
           </h2>
         </div>
 
-        <!-- 1. อัปโหลดภาพตราสัญลักษณ์ -->
+        <!-- 1. ช่องอัปโหลดไฟล์สัญลักษณ์ตราตั้งเอกสาร -->
         <div class="bg-red-50/50 rounded-xl p-4 border border-red-100 space-y-3">
           <label class="block text-sm font-bold text-red-900">1. อัปโหลดตราสัญลักษณ์ (PNG)</label>
           <div class="flex items-center justify-center w-full">
             <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-24 border-2 border-red-200 border-dashed rounded-lg cursor-pointer bg-white hover:bg-red-50 transition-all">
               <div class="text-center px-4">
-                <p class="text-xs text-red-700 font-bold">📁 คลิกเพื่อเลือกไฟล์ตราสัญลักษณ์</p>
-                <p class="text-[10px] text-slate-400 mt-1">จะแสดงเป็นตราหลักและลายน้ำโดยไม่มีขอบเหลือง</p>
+                <p class="text-xs text-red-700 font-bold">📂 คลิกเพื่ออัปโหลดไฟล์รูปภาพตราตั้ง</p>
+                <p class="text-[10px] text-slate-400 mt-1">จะถูกประมวลผลเป็นตราหลักและลายน้ำที่ไม่มีขอบเหลืองมารบกวน</p>
               </div>
               <input id="imageUpload" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
             </label>
           </div>
-          <!-- สถานะการอัปโหลด -->
+          
+          <!-- สถานะหลังอัปโหลดไฟล์รูปภาพเสร็จสิ้น -->
           <div id="imageStatusContainer" class="hidden flex items-center justify-between bg-white p-2 rounded-lg border border-red-100">
             <div class="flex items-center gap-2">
               <img id="thumbPreview" class="h-8 w-8 object-contain" />
@@ -129,7 +130,7 @@
           </div>
         </div>
 
-        <!-- 2. ข้อมูลทั่วไป -->
+        <!-- 2. ส่วนกรอกข้อมูลหัวข้อและเนื้อหารายงาน -->
         <div class="space-y-4">
           <h3 class="text-xs font-bold text-amber-600 uppercase border-l-2 border-red-500 pl-2">ส่วนหัวและเนื้อหา</h3>
           <div class="grid grid-cols-2 gap-4">
@@ -164,15 +165,15 @@
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1">ข้อความรายละเอียดในเอกสาร</label>
-            <textarea id="in-body" rows="3" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none resize-y">ข้อความ</textarea>
+            <textarea id="in-body" rows="3" oninput="syncText()" class="w-full text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 focus:outline-none resize-y">เทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทสเทส</textarea>
           </div>
         </div>
 
-        <!-- 3. รายนามผู้อนุมัติ -->
+        <!-- 3. ส่วนลงทะเบียนรายชื่อผู้อนุมัติท้ายกระดาษ -->
         <div class="space-y-3 pt-2">
           <h3 class="text-xs font-bold text-amber-600 uppercase border-l-2 border-red-500 pl-2">รายนามท้ายเอกสาร</h3>
           
-          <!-- บล็อก 1 -->
+          <!-- บล็อกที่ 1 (ซ้ายกลาง) -->
           <div class="p-3 bg-red-50/30 border border-red-100 rounded-lg space-y-2">
             <span class="text-xs font-bold text-red-800 block">👤 บล็อกซ้ายกลาง (ผู้อนุมัติ)</span>
             <div class="grid grid-cols-2 gap-2">
@@ -183,7 +184,7 @@
             <input type="text" id="in-s1-pos" value="ตำแหน่งภายในสังกัด" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="หน้าที่" />
           </div>
 
-          <!-- บล็อก 2 -->
+          <!-- บล็อกที่ 2 (ขวากลาง) -->
           <div class="p-3 bg-red-50/30 border border-red-100 rounded-lg space-y-2">
             <span class="text-xs font-bold text-red-800 block">👤 บล็อกขวากลาง (ผู้ออกเอกสาร)</span>
             <div class="grid grid-cols-2 gap-2">
@@ -194,7 +195,7 @@
             <input type="text" id="in-s2-pos" value="ตำแหน่งภายในสังกัด" oninput="syncText()" class="text-xs p-1.5 border rounded bg-white w-full" placeholder="หน้าที่" />
           </div>
 
-          <!-- บล็อก 3 -->
+          <!-- บล็อกที่ 3 (ซ้ายล่างสุด) -->
           <div class="p-3 bg-red-50/30 border border-red-100 rounded-lg space-y-2">
             <span class="text-xs font-bold text-red-800 block">👤 บล็อกซ้ายล่างสุด (ผู้อนุมัติเพิ่มเติม)</span>
             <div class="grid grid-cols-2 gap-2">
@@ -206,12 +207,13 @@
           </div>
         </div>
 
+        <!-- ปุ่มประมวลผลดาวน์โหลดเอกสาร -->
         <button type="button" onclick="downloadImage()" class="w-full py-4 px-6 bg-gradient-to-r from-red-600 via-red-700 to-amber-500 hover:from-red-500 hover:to-amber-500 text-white rounded-xl font-extrabold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
           💾 ดาวน์โหลดภาพเอกสาร (PNG)
         </button>
       </section>
 
-      <!-- ================= ฝั่งขวา: พรีวิว A4 ================= -->
+      <!-- ================= ฝั่งขวา: พรีวิวภาพเอกสารจำลอง A4 ================= -->
       <section class="lg:col-span-7 flex flex-col items-center w-full relative">
         <div class="w-full flex items-center justify-between mb-4 bg-white p-3 rounded-xl border border-red-100 shadow-sm relative z-20">
           <span class="text-sm font-bold text-red-800 flex items-center gap-2">
@@ -220,23 +222,23 @@
           </span>
         </div>
 
-        <!-- หน้าต่างสำหรับพรีวิวที่จะย่อสเกลตามหน้าจอ -->
+        <!-- หน้าต่างพรีวิวที่มีขนาดปรับตามหน้าจออย่างเหมาะสม -->
         <div id="preview-container" class="w-full bg-slate-200/50 p-4 rounded-2xl border border-slate-300 flex justify-center overflow-hidden">
           
           <div id="preview-wrapper">
-            <!-- ================= แผ่นกระดาษ A4 ของจริง (จะถูก Capture) ================= -->
+            <!-- ================= โครงสร้างแผ่นกระดาษ A4 จริงที่จะนำไปพิมพ์ภาพ (Capture Element) ================= -->
             <div id="a4-document" class="a4-paper">
               
-              <!-- ลายน้ำ (จะแสดงก็ต่อเมื่ออัปโหลดรูป) -->
+              <!-- ชั้นลายน้ำกึ่งกลางกระดาษ -->
               <div class="watermark-layer">
                 <img id="out-watermark" style="display: none; width: 450px; height: 450px; object-fit: contain;" />
               </div>
 
-              <!-- เนื้อหาทั้งหมดของหน้ากระดาษ (จัด Layout อย่างเป็นระเบียบ) -->
+              <!-- ชั้นโครงสร้างข้อความและตราสัญลักษณ์ (จัดตำแหน่งแบบกล่องปิด ป้องกันการทับซ้อน) -->
               <div class="content-layer flex flex-col justify-between">
                 
-                <div>
-                  <!-- แถวบนซ้าย - ขวา -->
+                <div class="w-full">
+                  <!-- ส่วนบน: ซ้าย และ ขวา -->
                   <div class="flex justify-between items-start text-[16px]">
                     <div id="out-left-header" class="w-[45%] whitespace-pre-wrap leading-snug">ใส่ข้อความ และวันที่</div>
                     <div class="w-[45%] text-right space-y-1">
@@ -245,7 +247,7 @@
                     </div>
                   </div>
 
-                  <!-- ตราสัญลักษณ์ (ตรงกลาง) -->
+                  <!-- ตราสัญลักษณ์ตรงกลางแผ่น (ไร้กรอบเหลือง) -->
                   <div class="flex justify-center mt-6">
                     <div class="w-[130px] h-[130px] flex items-center justify-center relative">
                       <div id="logo-placeholder" class="text-[11px] text-red-700/50 border border-dashed border-red-200 bg-red-50/20 px-3 py-5 rounded-lg text-center font-bold">
@@ -255,10 +257,10 @@
                     </div>
                   </div>
 
-                  <!-- ชื่อสังกัด/กรม (กลางหน้า) -->
+                  <!-- ชื่อกรม/หน่วยงานหลักกึ่งกลางหน้าแผ่น -->
                   <div id="out-main-dept" class="text-center font-bold text-[22px] mt-4 leading-snug">ชื่อสังกัด/กรม</div>
 
-                  <!-- เรียน / เรื่อง -->
+                  <!-- แถว เรียน และ เรื่อง -->
                   <div class="mt-10 space-y-2 text-[16px]">
                     <div class="flex items-start">
                       <span class="font-bold w-[75px] shrink-0">เรียน</span>
@@ -270,45 +272,45 @@
                     </div>
                   </div>
 
-                  <!-- ข้อความ (ย่อหน้า) -->
-                  <div id="out-body" class="mt-6 text-[16px] text-justify leading-relaxed whitespace-pre-wrap pl-[75px] w-full break-words" style="word-break: break-word; overflow-wrap: anywhere;">ข้อความ</div>
+                  <!-- แถวรายละเอียดข้อความ (เยื้องด้านซ้าย 75px และบีบขอบด้านขวาอัตโนมัติ ไม่ล้นขอบแดงชัวร์ 100%) -->
+                  <div id="out-body" class="mt-6 text-[16px] text-justify leading-relaxed whitespace-pre-wrap ml-[75px] break-all" style="word-break: break-all; overflow-wrap: break-word;">ข้อความ</div>
                 </div>
 
-                <!-- ส่วนลายเซ็น (จัดเรียงโดยใช้ Flexbox ควบคุมระยะห่าง ป้องกันการทับซ้อนเด็ดขาด) -->
-                <div class="space-y-12">
-                  <!-- แถวกลาง (บล็อก 1 ซ้าย, บล็อก 2 ขวา) -->
-                  <div class="flex justify-between px-6">
-                    <!-- บล็อก 1 -->
+                <!-- ส่วนประวัติลายมือชื่อผู้อนุมัติท้ายกระดาษ (ป้องกันการซ้อนกัน 100%) -->
+                <div class="space-y-12 w-full">
+                  <!-- แถวกลาง: บล็อก 1 (ซ้าย) และ บล็อก 2 (ขวา) -->
+                  <div class="flex justify-between px-6 w-full">
+                    <!-- บล็อกที่ 1 -->
                     <div class="w-[240px] text-center flex flex-col items-center">
                       <div class="w-full flex items-center mb-1">
                         <span id="out-s1-rank" class="text-slate-400 font-bold text-[15px]">ยศ</span>
                         <div class="sign-dashed"></div>
-                        <span id="out-s1-title" class="font-bold text-red-700 text-[15px]">ผู้อนุมัติ</span>
+                        <span id="out-s1-title" class="font-bold text-red-700 text-[15px] shrink-0">ผู้อนุมัติ</span>
                       </div>
                       <div id="out-s1-name" class="pt-6 font-bold text-[18px]"></div>
                       <div id="out-s1-pos" class="text-[14px] text-slate-500 mt-1"></div>
                     </div>
 
-                    <!-- บล็อก 2 -->
+                    <!-- บล็อกที่ 2 -->
                     <div class="w-[240px] text-center flex flex-col items-center">
                       <div class="w-full flex items-center mb-1">
                         <span id="out-s2-rank" class="text-slate-400 font-bold text-[15px]">ยศ</span>
                         <div class="sign-dashed"></div>
-                        <span id="out-s2-title" class="font-bold text-red-700 text-[15px]">ผู้ออกเอกสาร</span>
+                        <span id="out-s2-title" class="font-bold text-red-700 text-[15px] shrink-0">ผู้ออกเอกสาร</span>
                       </div>
                       <div id="out-s2-name" class="pt-6 font-bold text-[18px]"></div>
                       <div id="out-s2-pos" class="text-[14px] text-slate-500 mt-1"></div>
                     </div>
                   </div>
 
-                  <!-- แถวล่างสุด (บล็อก 3 ซ้าย) -->
-                  <div class="flex justify-start px-6">
-                    <!-- บล็อก 3 -->
+                  <!-- แถวล่าง: บล็อก 3 (ซ้าย) -->
+                  <div class="flex justify-start px-6 w-full">
+                    <!-- บล็อกที่ 3 -->
                     <div class="w-[240px] text-center flex flex-col items-center">
                       <div class="w-full flex items-center mb-1">
                         <span id="out-s3-rank" class="text-slate-400 font-bold text-[15px]">ยศ</span>
                         <div class="sign-dashed"></div>
-                        <span id="out-s3-title" class="font-bold text-red-700 text-[15px]">ผู้อนุมัติ</span>
+                        <span id="out-s3-title" class="font-bold text-red-700 text-[15px] shrink-0">ผู้อนุมัติ</span>
                       </div>
                       <div id="out-s3-name" class="pt-6 font-bold text-[18px]"></div>
                       <div id="out-s3-pos" class="text-[14px] text-slate-500 mt-1"></div>
@@ -316,52 +318,50 @@
                   </div>
                 </div>
 
-              </div>
-            </div>
+              </div> <!-- สิ้นสุดชั้นเนื้อหา -->
+              
+            </div> <!-- สิ้นสุดแผ่น A4 -->
           </div>
+          
         </div>
       </section>
 
     </div>
   </main>
 
-  <!-- มอดอลสถานะการดาวน์โหลด -->
+  <!-- มอดอลแสดงสถานะการโหลดข้อมูลประมวลผลดาวน์โหลดภาพ -->
   <div id="loadingModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl border-t-4 border-red-600">
-      <h3 class="text-lg font-bold text-slate-900 mb-2">กำลังจัดเตรียมรูปภาพ 100% WYSIWYG...</h3>
-      <p class="text-xs text-slate-500">ระบบกำลังทำสำเนาภาพในขนาดจริง ป้องกันตัวอักษรผิดเพี้ยน...</p>
+      <h3 class="text-lg font-bold text-slate-900 mb-2">กำลังส่งออกภาพแผ่นเอกสาร...</h3>
+      <p class="text-xs text-slate-500">ระบบประมวลผลจำลองภาพนอกสายตาเพื่อความแม่นยำสูงสูด 100% ตรงตามที่เห็นแน่นอน...</p>
     </div>
   </div>
 
   <script>
-    // เมื่อโหลดหน้าเสร็จ
+    // สตาร์ทโหลดหน้าจอกระดาษครั้งแรก
     window.onload = function() {
-      syncText(); // อัปเดตข้อความเริ่มต้น
-      handleResize(); // ปรับสเกลหน้าพรีวิวให้พอดีจอ
+      syncText(); // อัปเดตข้อความพรีวิว
+      handleResize(); // ปรับแต่งสเกลมุมมองกระดาษพรีวิวให้เหมาะสมกับอุปกรณ์ผู้ใช้งาน
     };
 
-    // ทำให้หน้าต่าง A4 พรีวิวย่อขนาดลงมาพอดีกับหน้าจอมือถือ/แท็บเล็ต โดยรักษาขนาดจริงไว้
+    // ตัวปรับสมดุลพรีวิวขนาด A4 ตามสัดส่วนหน้าจอของผู้ใช้
     function handleResize() {
       const container = document.getElementById('preview-container');
       const wrapper = document.getElementById('preview-wrapper');
       
-      // ความกว้างของกล่องแม่ หักลบ padding
       const containerWidth = container.clientWidth - 32; 
-      
-      // คำนวณสเกลเทียบกับกระดาษ A4 (กว้าง 794px)
       let scale = containerWidth / 794;
-      if (scale > 1) scale = 1; // ไม่ขยายใหญ่เกิน 100%
+      if (scale > 1) scale = 1; // ล็อกไม่ให้พรีวิวสเกลใหญ่เกินแผ่นจริง
       
       wrapper.style.transform = `scale(${scale})`;
-      // ปรับความสูงของกล่องแม่ให้พอดีกับลูกที่ถูกย่อสเกล
       wrapper.style.height = `${1123 * scale}px`;
       container.style.height = `${(1123 * scale) + 32}px`;
     }
     
-    // ดักจับการย่อ/ขยายหน้าต่างเบราว์เซอร์
+    // รีสเกลกระดาษพรีวิวเมื่อมีการยืดขยายหน้าจอเบราว์เซอร์
     window.addEventListener('resize', handleResize);
 
-    // อัปโหลดและแสดงผลรูปภาพตรา
+    // ฟังก์ชันจัดการการนำเข้ารูปภาพสัญลักษณ์ตราตั้งเอกสาร
     function handleImageUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -370,18 +370,18 @@
       reader.onload = function(e) {
         const dataUrl = e.target.result;
         
-        // ใส่ภาพเข้าหน้ากระดาษ
+        // ติดตั้งภาพตราหลัก
         const outLogo = document.getElementById('out-logo');
-        const outWatermark = document.getElementById('out-watermark');
-        
         outLogo.src = dataUrl;
         outLogo.style.display = 'block';
         document.getElementById('logo-placeholder').style.display = 'none';
         
+        // ติดตั้งเป็นภาพลายน้ำหลังข้อความกึ่งกลางหน้าแผ่น
+        const outWatermark = document.getElementById('out-watermark');
         outWatermark.src = dataUrl;
         outWatermark.style.display = 'block';
 
-        // แสดงพรีวิวรูปฝั่งซ้ายมือ
+        // แสดงสถานะข้อมูลฝั่งควบคุมด้านซ้ายมือ
         document.getElementById('imageStatusContainer').classList.remove('hidden');
         document.getElementById('thumbPreview').src = dataUrl;
         document.getElementById('fileNameLabel').innerText = file.name;
@@ -389,7 +389,7 @@
       reader.readAsDataURL(file);
     }
 
-    // ลบรูปภาพตราออก
+    // ฟังก์ชันการล้างข้อมูลตราสัญลักษณ์ออก
     function clearUploadedImage() {
       document.getElementById('out-logo').style.display = 'none';
       document.getElementById('out-logo').src = '';
@@ -402,7 +402,7 @@
       document.getElementById('imageStatusContainer').classList.add('hidden');
     }
 
-    // อัปเดตข้อความจากฝั่งซ้าย (ฟอร์ม) ไปยังกระดาษพรีวิว (ฝั่งขวา)
+    // ฟังก์ชันซิงโครไนซ์อัปเดตข้อมูลจากบอร์ดฝั่งควบคุมไปยังแผ่นกระดาษพรีวิว
     function syncText() {
       document.getElementById('out-left-header').innerText = document.getElementById('in-left-header').value;
       document.getElementById('out-right-header').innerText = document.getElementById('in-right-header').value;
@@ -412,7 +412,7 @@
       document.getElementById('out-subject').innerText = document.getElementById('in-subject').value;
       document.getElementById('out-body').innerText = document.getElementById('in-body').value;
 
-      // รายนาม
+      // รายนามผู้อนุมัติ
       for(let i=1; i<=3; i++) {
         document.getElementById(`out-s${i}-rank`).innerText = document.getElementById(`in-s${i}-rank`).value;
         document.getElementById(`out-s${i}-title`).innerText = document.getElementById(`in-s${i}-title`).value;
@@ -421,50 +421,49 @@
       }
     }
 
-    // กระบวนการโคลนและบันทึกภาพ (แก้ปัญหาตัวอักษรซ้อนทับกันอย่างถาวร)
+    // ฟังก์ชันประมวลผลโคลนนิ่งดาวน์โหลดรูปภาพแบบ 100% WYSIWYG
     function downloadImage() {
       const modal = document.getElementById('loadingModal');
       modal.classList.remove('hidden');
 
-      // 1. ดึงกระดาษหน้าหลัก
+      // 1. ดึงข้อมูลแผ่นเอกสารโครงสร้างจริง
       const originalDoc = document.getElementById('a4-document');
       
-      // 2. ทำสำเนา (Clone) ข้อมูลในกระดาษทั้งหมด
+      // 2. ทำการโคลนวัตถุแผ่นกระดาษทั้งหมด
       const cloneDoc = originalDoc.cloneNode(true);
       
-      // 3. กำหนด Style ให้ Clone ลอยอยู่นอกหน้าจอ เพื่อให้มันเรนเดอร์ในขนาด A4 จริงๆ 100% 
-      // โดยไม่โดน CSS Transform บีบสเกลจนทำให้พิกัดตัวอักษรเพี้ยน
+      // 3. ปรับ Style ของโครงสร้างที่โคลนให้ออกไปเรนเดอร์ด้านนอกหน้าจอแบบสเกลจริง 1:1 ป้องกันไม่ให้โดน Zoom/Transform เบียดตำแหน่งตัวอักษร
       cloneDoc.style.position = 'fixed';
       cloneDoc.style.top = '0';
       cloneDoc.style.left = '-9999px';
-      cloneDoc.style.transform = 'none'; // ปลดล็อคการย่อสเกลทั้งหมด
+      cloneDoc.style.transform = 'none'; // ยกเลิกการซูมของอุปกรณ์พกพาทั้งหมดในขั้นตอนเรนเดอร์ภาพ
       
       document.body.appendChild(cloneDoc);
 
-      // 4. ตั้งค่าความชัดและใช้งานไลบรารี html-to-image วาดกระดาษจำลอง
+      // 4. บันทึกและดึงรูปภาพ PNG ความละเอียดสูงผ่าน html-to-image
       setTimeout(() => {
         htmlToImage.toPng(cloneDoc, { 
           quality: 1.0,
-          pixelRatio: 2 // ภาพชัดขึ้น 2 เท่า
+          pixelRatio: 2 // เพิ่มความละเอียดคมชัดของรูปภาพปลายทางเป็น 2 เท่าพิมพ์แจกจ่ายได้สบาย
         })
         .then(function (dataUrl) {
           const link = document.createElement('a');
           const title = document.getElementById('in-main-dept').value || 'document';
-          link.download = `เอกสาร_${title}.png`;
+          link.download = `เอกสารเสนออนุมัติ_${title}.png`;
           link.href = dataUrl;
           link.click();
           
-          // ลบกระดาษโคลนทิ้งและปิดหน้าต่างโหลด
+          // ล้างแผ่นโคลนนิ่งที่แอบเรนเดอร์ทิ้งและปิดกล่องโหลดความคืบหน้า
           document.body.removeChild(cloneDoc);
           modal.classList.add('hidden');
         })
         .catch(function (error) {
-          console.error('เกิดข้อผิดพลาด:', error);
+          console.error('เกิดข้อผิดพลาดในการแปลงเอกสาร:', error);
           document.body.removeChild(cloneDoc);
           modal.classList.add('hidden');
-          alert('เกิดข้อผิดพลาดในการสร้างภาพ กรุณาลองอีกครั้ง');
+          alert('เกิดข้อผิดพลาดทางระบบประมวลผลรูปภาพ กรุณาลองอีกครั้ง');
         });
-      }, 500); // รอฟอนต์และภาพจัดเตรียมตัวสักครู่
+      }, 500); // ดีเลย์ 500ms เพื่อความปลอดภัยในการเตรียมฟอนต์และรูปภาพให้พร้อมเขียนแผ่นภาพ
     }
   </script>
 </body>
